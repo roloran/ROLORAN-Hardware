@@ -9077,6 +9077,16 @@
 	)
 	(wire
 		(pts
+			(xy 96.52 77.47) (xy 96.52 81.28)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3f364f83-07d9-4950-b6a2-b727ceac73d2")
+	)
+	(wire
+		(pts
 			(xy 261.62 248.92) (xy 261.62 251.46)
 		)
 		(stroke
@@ -10067,6 +10077,16 @@
 	)
 	(wire
 		(pts
+			(xy 93.98 74.93) (xy 96.52 74.93)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8685277d-78b4-4cfa-9d89-bdc59078ba8e")
+	)
+	(wire
+		(pts
 			(xy 259.08 160.02) (xy 259.08 161.29)
 		)
 		(stroke
@@ -10464,6 +10484,16 @@
 			(type default)
 		)
 		(uuid "a2496b74-78ac-42aa-9a1a-48390931317d")
+	)
+	(wire
+		(pts
+			(xy 76.2 116.84) (xy 96.52 116.84)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a2b9d693-d6ee-4ecd-9e1f-dd1bced8344b")
 	)
 	(wire
 		(pts
@@ -11164,6 +11194,16 @@
 			(type default)
 		)
 		(uuid "caabae81-98f0-4ca8-b789-aed32058a4a7")
+	)
+	(wire
+		(pts
+			(xy 96.52 116.84) (xy 96.52 88.9)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ccaacc4e-39cb-48fc-9a8c-d1422d35b7ce")
 	)
 	(wire
 		(pts
@@ -12887,6 +12927,28 @@
 	)
 	(global_label "GND"
 		(shape input)
+		(at 93.98 74.93 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "48118779-3873-4740-b408-8f3a10f3644d")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 87.1243 74.93 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "GND"
+		(shape input)
 		(at 34.29 63.5 180)
 		(fields_autoplaced yes)
 		(effects
@@ -12990,6 +13052,76 @@
 			(project "LoRaQuadV1"
 				(path "/f1be6d49-d189-40ec-a216-cb4d86b5b409"
 					(reference "#PWR020")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 96.52 85.09 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "02f38c8e-e3b3-45f8-9dfd-f9ab137b2572")
+		(property "Reference" "R24"
+			(at 99.06 83.8199 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "R"
+			(at 99.06 86.3599 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 94.742 85.09 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 96.52 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 96.52 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "7cb64a08-71d7-42bc-9501-8cfa7df92def")
+		)
+		(pin "2"
+			(uuid "56fbd380-cb06-42ce-a986-1be95b35f72b")
+		)
+		(instances
+			(project "quad"
+				(path "/f1be6d49-d189-40ec-a216-cb4d86b5b409"
+					(reference "R24")
 					(unit 1)
 				)
 			)
@@ -21722,6 +21854,73 @@
 				(path "/f1be6d49-d189-40ec-a216-cb4d86b5b409"
 					(reference "U3")
 					(unit 4)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Connector_Generic:Conn_01x02")
+		(at 101.6 74.93 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "a44e1c37-4ecd-460d-96ac-17e0a59d3b34")
+		(property "Reference" "J9"
+			(at 101.6 68.58 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "Conn_01x02"
+			(at 101.6 71.12 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal"
+			(at 101.6 74.93 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 101.6 74.93 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
+			(at 101.6 74.93 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "d3bb8a30-f6d2-49fe-a9fb-3900a4ba5ece")
+		)
+		(pin "1"
+			(uuid "19cd6980-5635-4985-892a-77f6909c0feb")
+		)
+		(instances
+			(project "quad"
+				(path "/f1be6d49-d189-40ec-a216-cb4d86b5b409"
+					(reference "J9")
+					(unit 1)
 				)
 			)
 		)
