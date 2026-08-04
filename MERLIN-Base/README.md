@@ -8,3 +8,4 @@ The following files are contained:
   If printed measures should be taken to get it as waterproof as possible. 
 - _Elec_Components_Case_Simplified.FCstd_: A variant of _Elec_Components_Case.FCstd_ with simplified geometry.
   This variant also contains a drilling template.
+- _Elec_Components_Case_Cover.FCstd_: Cover for the the _Elec_Components_Case.FCstd_.
