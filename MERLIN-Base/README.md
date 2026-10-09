@@ -9,3 +9,5 @@ The following files are contained:
 - _Elec_Components_Case_Simplified.FCstd_: A variant of _Elec_Components_Case.FCstd_ with simplified geometry.
   This variant also contains a drilling template.
 - _Elec_Components_Case_Cover.FCstd_: Cover for the the _Elec_Components_Case.FCstd_.
+- _MERLIN-Base-Inlay.stl_: PCB mounting insert with cable management
+- _MERLIN-Base-PCB-Holder.stl_: Key to insert into the _MERLIN-Base-Inlay.stl_ to hold the PCB in place
