@@ -4,7 +4,7 @@ The MERLIN-Base is a dual-purpose installation. Its primary function is to funct
 
 The following files are contained:
 - _Elec_Components_Case.FCstd_: A FreeCAD file containing a model of the case for storing electrical components inside the MERLIN-Base.
-  This case is an enclosure for the LoRaQuad circuit board and comes with holes for all required external connections.
+  This case is an enclosure for the `LoRaQuadV2` circuit board and comes with holes for all required external connections.
   If printed measures should be taken to get it as waterproof as possible. 
 - _Elec_Components_Case_Simplified.FCstd_: A variant of _Elec_Components_Case.FCstd_ with simplified geometry.
   This variant also contains a drilling template.
