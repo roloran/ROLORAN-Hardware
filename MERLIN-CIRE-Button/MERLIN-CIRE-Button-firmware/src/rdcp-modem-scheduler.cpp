@@ -314,8 +314,9 @@ void scheduler_send_message_force(uint8_t radio_id, uint8_t channel)
   return; 
 }
 
-bool scheduler_callback_txfin(uint8_t radio_to_use, uint8_t channel)
+bool scheduler_callback_txfin(uint8_t radio_to_use, uint8_t channel, uint8_t *callback_selector)
 {
+  if (callback_selector != NULL) *callback_selector = TX_CALLBACK_NONE;
   last_tx_activity[channel] = my_millis();
 
   int num_waiting = RDCP_INDEX_NONE;
@@ -389,14 +390,8 @@ bool scheduler_callback_txfin(uint8_t radio_to_use, uint8_t channel)
   }
   else
   { // no further retransmissions for any sent message
-    if (txq.entries[tx_ongoing[channel]].callback_selector == TX_CALLBACK_NONE)
-    {
-      // Nothing to do; no callback necessary.
-    }
-    else /* Add more callback options here later */
-    {
-      // do nothing so far
-    }
+    if (callback_selector != NULL)
+      *callback_selector = txq.entries[tx_ongoing[channel]].callback_selector;
     /* Clear the TXQ entry */
     txq.entries[tx_ongoing[channel]].waiting = IS_NOT_WAITING;
     txq.entries[tx_ongoing[channel]].payload_length = ZERO_LENGTH;

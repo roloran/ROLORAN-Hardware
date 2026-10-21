@@ -50,8 +50,9 @@ void sleep_light(void);
 
 /**
  * Enter deep sleep mode.
+ * @param wake_after_ms Optional timer wake-up delay in milliseconds; 0 keeps the configured behavior
  */
-void sleep_deep(void);
+void sleep_deep(uint64_t wake_after_ms=0);
 
 /**
  * Check the device's wake-up reason; perform required actions after wake-up from deep sleep.

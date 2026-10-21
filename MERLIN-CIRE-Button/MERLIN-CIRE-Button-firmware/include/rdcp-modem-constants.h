@@ -202,6 +202,7 @@
 #define CALLBACK_TYPE_RX      3 
 #define CALLBACK_TYPE_CADRES  4
 #define TX_CALLBACK_NONE      0
+#define TX_CALLBACK_CIRE      1
 
 // Constants used as filename prefixes
 #define FILENAME_AUTOSTART "/autostart.lnk"

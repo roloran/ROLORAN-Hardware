@@ -722,8 +722,10 @@ void radio_loop(void)
             uint8_t post_tx_channel = pinout[i].default_channel;
             radio_start_receive(i, post_tx_channel, FORCED_CHANNEL_SWITCH);
             enable_interrupt[i] = true;
-            bool tx_queue_entry_finished = scheduler_callback_txfin(i, current_channel);
-            callback_tx_finished(i, current_channel, CALLBACK_LOCAL, tx_queue_entry_finished);
+            uint8_t tx_callback_selector = TX_CALLBACK_NONE;
+            bool tx_queue_entry_finished = scheduler_callback_txfin(i, current_channel, &tx_callback_selector);
+            if (tx_queue_entry_finished)
+              callback_tx_finished(i, current_channel, CALLBACK_LOCAL, tx_callback_selector);
             if (pinout[i].radio_type != RADIO_TYPE_AIR) air_fan_callback_txfin(i, current_channel);
           } // DIO1 transmission flag was set
         } // message was already on the way

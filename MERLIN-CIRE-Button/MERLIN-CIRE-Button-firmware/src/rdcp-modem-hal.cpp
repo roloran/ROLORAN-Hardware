@@ -296,11 +296,13 @@ void sleep_light(void)
 /**
  * Enter deep sleep mode.
  */
-void sleep_deep(void)
+void sleep_deep(uint64_t wake_after_ms)
 {
   serial_writeln("INFO: Entering ESP32 deep sleep mode");
   sleep_restore_once_only = COUNT_ZERO;
   sleep_prepare();
+  if (wake_after_ms > 0)
+    esp_sleep_enable_timer_wakeup(wake_after_ms * (uint64_t) MILLISECONDS_TO_MICROSECONDS);
   if (cfg.toggle_spi_on_sleep) SPI.end();
 	esp_deep_sleep_start(); // never returns; system restarts on wake-up
   return;

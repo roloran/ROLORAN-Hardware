@@ -181,6 +181,11 @@ uint16_t cire_button_depressed_timeout = 0;
 // Idle time before turning off the display and entering deep sleep, in seconds.
 uint16_t cire_button_idle_timeout = 120;
 
+// Heartbeat scheduling. Actual heartbeat message transmission is not implemented yet.
+const int64_t cire_button_heartbeat_initial_delay = 60 * SECONDS_TO_MILLISECONDS;
+const int64_t cire_button_heartbeat_interval = 12 * HOURS_TO_MILLISECONDS;
+int64_t cire_button_next_heartbeat_at = TIMESTAMP_ZERO;
+
 // Time to wait for the corresponding ACK, in seconds.
 uint16_t cire_timeout_ack_da = 60;
 uint16_t cire_timeout_ack_hq = 900;
@@ -198,6 +203,7 @@ int64_t cire_button_low_since             = TIMESTAMP_ZERO;
 int64_t cire_button_display_on_since     = TIMESTAMP_ZERO;
 bool cire_button_cire_ongoing            = OPTION_DISABLED;
 bool cire_button_cire_on_wakeup_pending  = OPTION_DISABLED;
+bool cire_button_heartbeat_on_wakeup_pending = OPTION_DISABLED;
 
 // Imported libraries and code snippets for OLED display based on
 // https://github.com/HelTecAutomation/Heltec_ESP32/blob/master/examples/OLED/SimpleDemo/SimpleDemo.ino
@@ -232,6 +238,8 @@ void cire_button_send_cire(void);
 bool cire_button_hq_shared_secret_is_unset(void);
 void get_inline_hash(struct rdcpv04_message *m, uint8_t payloadprefixlength, uint8_t *hashtarget);
 void cire_button_sleep_if_idle(void);
+void cire_button_schedule_heartbeat_after(int64_t delay_ms);
+void cire_button_transmit_heartbeat(void);
 
 /*
   ==================================================================================================
@@ -244,6 +252,17 @@ bool cire_button_hq_shared_secret_is_unset(void)
     if (cfg.rdcp_hqaeskey[i] != ZEROBYTE) return false;
   }
   return true;
+}
+
+void cire_button_schedule_heartbeat_after(int64_t delay_ms)
+{
+  cire_button_next_heartbeat_at = my_millis() + delay_ms;
+}
+
+void cire_button_transmit_heartbeat(void)
+{
+  serial_writeln("INFO: Heartbeat is due; transmission is not implemented yet");
+  cire_button_schedule_heartbeat_after(cire_button_heartbeat_interval);
 }
 
 /**
@@ -547,6 +566,7 @@ void rdcp_cire_resend(void)
     serial_writeln("WARNING: CIRE could not be sent (ACK missing), giving up");
     cire_button_display_threeliner("Meldung NICHT", "zugestellt, keine", "Verbindung");
     cire_button_cire_ongoing = false;
+    cire_button_schedule_heartbeat_after(cire_button_heartbeat_interval);
     led_off();
     cmd_buzz(CMD_BUZ_FAILURE);
     return;
@@ -640,6 +660,7 @@ void rdcp_cire_ack(uint16_t origin, uint16_t confirmedseqnr, uint8_t acktype)
       for (int i=0; i<16; i++) cire_seqnrs[i] = RDCPv04_SEQUENCENR_SPECIAL_ZERO;
       cire_retry = 0;
       cire_button_cire_ongoing = false;
+      cire_button_schedule_heartbeat_after(cire_button_heartbeat_interval);
       cire_button_display_threeliner("Kein Krisenbetrieb.", "Notfall kann nicht", "gemeldet werden.");
       cmd_buzz(CMD_BUZ_FAILURE);
     }
@@ -658,11 +679,20 @@ void rdcp_cire_ack(uint16_t origin, uint16_t confirmedseqnr, uint8_t acktype)
 
   if ((origin > 0x0000) && (origin < RDCPv04_ADDRESS_BBKDA_LOWERBOUND))
   {
+    if ((acktype != RDCPv04_ACKNOWLEDGMENT_POSITIVE) &&
+        (acktype != RDCPv04_ACKNOWLEDGMENT_NEGATIVE) &&
+        (acktype != RDCPv04_ACKNOWLEDGMENT_POSNEG))
+    {
+      serial_writeln("WARNING: Unknown ACK type");
+      return;
+    }
+
     // Received ACK was from HQ; in any case, clear current CIRE state:
     for (int i=0; i<16; i++) cire_seqnrs[i] = RDCPv04_SEQUENCENR_SPECIAL_ZERO;
     cire_retry = 0;
     cire_state = CIRE_STATE_NONE;
     cire_button_cire_ongoing = false;
+    cire_button_schedule_heartbeat_after(cire_button_heartbeat_interval);
 
     if (acktype == RDCPv04_ACKNOWLEDGMENT_POSITIVE)
     {
@@ -682,22 +712,19 @@ void rdcp_cire_ack(uint16_t origin, uint16_t confirmedseqnr, uint8_t acktype)
       cire_button_display_threeliner("Notfallmeldung ist", "beim Krisenstab", "angekommen. (keiner da)");
       cmd_buzz(CMD_BUZ_SUCCESS);
     }
-    else
-    {
-      serial_writeln("WARNING: Unknown ACK type");
-      return;
-    }
   }
 
   return;
 }
 
-void plugin_callback(uint8_t radio, uint8_t channel, int cb_type, bool cad_result)
+void plugin_callback(uint8_t radio, uint8_t channel, int cb_type, bool cad_result, uint8_t tx_callback_selector)
 {
   /* Handle callbacks here. */
   int64_t now = my_millis();
 
-  if ((cb_type == CALLBACK_TYPE_TXFIN) && cire_button_cire_ongoing)
+  if ((cb_type == CALLBACK_TYPE_TXFIN) &&
+      (tx_callback_selector == TX_CALLBACK_CIRE) &&
+      cire_button_cire_ongoing)
   {
     cire_button_display_threeliner("Notfall-Meldung", "wurde per Funk", "gesendet. Warten!");
     led_blink();
@@ -811,7 +838,7 @@ void cire_button_send_cire(void)
 
   scheduler_enqueue(CHANNEL1, PAYLOAD_TYPE_RDCP_V04,
                     data, RDCPv04_HEADER_SIZE + rm.header.rdcp_payload_length,
-                    SCHEDULING_MODE_CHANNEL_FREE, TX_CALLBACK_NONE, ZERO_TIMESTAMP);
+                    SCHEDULING_MODE_CHANNEL_FREE, TX_CALLBACK_CIRE, ZERO_TIMESTAMP);
 
   return;
 }
@@ -856,7 +883,10 @@ void cire_button_sleep_if_idle(void)
     sx1262_radios[0]->sleep(false);
   }
 
-  sleep_deep();
+  int64_t heartbeat_wake_after = cire_button_next_heartbeat_at - my_millis();
+  if (heartbeat_wake_after <= 0) return;
+
+  sleep_deep((uint64_t) heartbeat_wake_after);
 #endif
 
   return;
@@ -956,13 +986,24 @@ void plugin_loop(void)
 #if defined(ESP32)
     if (cfg.woken_from_deep_sleep == OPTION_ENABLED)
     {
-      if (cire_button_wakeup_behavior == WAKEUPBEHAVIOR_CIRE)
+      esp_sleep_wakeup_cause_t wakeup_cause = esp_sleep_get_wakeup_cause();
+      bool button_wakeup =
+        (wakeup_cause == ESP_SLEEP_WAKEUP_EXT1) &&
+        (cfg.additional_wakeup_pin == CIRE_BUTTON_PIN) &&
+        (esp_sleep_get_ext1_wakeup_status() & (1ULL << CIRE_BUTTON_PIN));
+
+      if (wakeup_cause == ESP_SLEEP_WAKEUP_TIMER)
       {
+        cire_button_heartbeat_on_wakeup_pending = OPTION_ENABLED;
+      }
+      else if (cire_button_wakeup_behavior == WAKEUPBEHAVIOR_CIRE)
+      {
+        // In the default mode, every non-timer deep-sleep wake is treated as a
+        // button press. The user may have released the button before startup
+        // reaches this point, so this path must not depend on its live level.
         cire_button_cire_on_wakeup_pending = OPTION_ENABLED;
       }
-      else if ((esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT1) &&
-               (cfg.additional_wakeup_pin == CIRE_BUTTON_PIN) &&
-               (esp_sleep_get_ext1_wakeup_status() & (1ULL << CIRE_BUTTON_PIN)))
+      else if (button_wakeup)
       {
         button_press_by_wakeup = OPTION_ENABLED;
       }
@@ -971,10 +1012,12 @@ void plugin_loop(void)
 
     if ((button_press_by_wakeup == OPTION_ENABLED) || cire_button_cire_on_wakeup_pending)
     {
-      // wakup from sleep
+      // Wake-up caused by the user pressing the button.
       cmd_buzz(CMD_BUZ_WAKEUP);
-    } else {
-      // cold start
+    }
+    else if (cfg.woken_from_deep_sleep == OPTION_DISABLED)
+    {
+      // Cold start. Timer wake-ups deliberately remain silent.
       cmd_buzz(CMD_BUZ_BOOT);
     }
 
@@ -995,7 +1038,21 @@ void plugin_loop(void)
     display.init();
     display.setFont(ArialMT_Plain_16);
     display.setTextAlignment(TEXT_ALIGN_LEFT);
-    cire_button_display_threeliner("MERLIN", "Alarmknopf", "ist betriebsbereit");
+
+    if (cire_button_heartbeat_on_wakeup_pending)
+    {
+      // A scheduled heartbeat is a background operation: keep the UI dark and
+      // allow the device to return to sleep immediately after handling it.
+      display.displayOff();
+      cire_button_display_on_since = my_millis() -
+        (int64_t) cire_button_idle_timeout * SECONDS_TO_MILLISECONDS - 1;
+      cire_button_next_heartbeat_at = my_millis();
+    }
+    else
+    {
+      cire_button_display_threeliner("MERLIN", "Alarmknopf", "ist betriebsbereit");
+      cire_button_schedule_heartbeat_after(cire_button_heartbeat_initial_delay);
+    }
 
     // use 12 bit precision for LEDC timer
     #define LEDC_TIMER_12_BIT 12
@@ -1006,7 +1063,7 @@ void plugin_loop(void)
     // fade LED PIN (replace with LED_BUILTIN constant for built-in LED)
     #define LED_PIN 4
 
-    if (!cfg.radios_initialized)
+    if (!cfg.radios_initialized && !cire_button_heartbeat_on_wakeup_pending)
     {
       cire_button_display_threeliner("Bitte erst", "die Konfiguration", "einrichten. ;-)");
     }
@@ -1025,6 +1082,10 @@ void plugin_loop(void)
     cire_button_cire_on_wakeup_pending = OPTION_DISABLED;
     cire_button_pressed = true;
     cire_button_last_press_timestamp = now;
+  }
+  if (cire_button_heartbeat_on_wakeup_pending)
+  {
+    serial_writeln("INFO: Wake-up reason was the scheduled heartbeat");
   }
 
   /* Require a stable low level to reject wake-up glitches and button bounce. */
@@ -1061,6 +1122,7 @@ void plugin_loop(void)
     serial_writeln("INFO: CIRE Button has been pressed!");
     if (!cire_button_cire_ongoing)
     {
+      cire_button_heartbeat_on_wakeup_pending = OPTION_DISABLED;
       cire_button_cire_ongoing = true;
       cire_retry = ZERO_LENGTH;
       cire_current_refnr = persistence_get_next_cire_reference_number(cfg.rdcp_address);
@@ -1075,6 +1137,15 @@ void plugin_loop(void)
   if (cire_button_cire_ongoing)
   {
     cire_button_check_timer();
+  }
+
+  /* A CIRE always has priority over a due heartbeat. */
+  if (!cire_button_cire_ongoing &&
+      (cire_button_next_heartbeat_at != TIMESTAMP_ZERO) &&
+      (now >= cire_button_next_heartbeat_at))
+  {
+    cire_button_heartbeat_on_wakeup_pending = OPTION_DISABLED;
+    cire_button_transmit_heartbeat();
   }
 
   /*

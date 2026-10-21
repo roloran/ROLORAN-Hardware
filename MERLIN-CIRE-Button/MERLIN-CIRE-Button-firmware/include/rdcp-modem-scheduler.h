@@ -73,9 +73,10 @@ bool scheduler_callback_cad(uint8_t radio_id, uint8_t channel_id, bool cad_busy)
  * Let the scheduler know that a transmission has finished, so it can schedule retransmissions.
  * @param radio_id Radio id
  * @param channel_id Channel id
+ * @param callback_selector Receives the completed queue entry's callback selector
  * @return true if the complete queue entry has been transmitted, false if a retransmission was scheduled
  */
-bool scheduler_callback_txfin(uint8_t radio_to_use, uint8_t channel);
+bool scheduler_callback_txfin(uint8_t radio_to_use, uint8_t channel, uint8_t *callback_selector=NULL);
 
 /**
  * Add a message to send to the TX Queue scheduler.

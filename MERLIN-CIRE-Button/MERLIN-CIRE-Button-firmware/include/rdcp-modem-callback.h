@@ -11,8 +11,9 @@
  * @param radio Radio that has finished transmitting
  * @param channel Channel on which the LoRa packet was transmitted
  * @param cb_type Callback type, CALLBACK_LOCAL or CALLBACK_AIR
+ * @param callback_selector Selector associated with the completed scheduler entry
  */
-void callback_tx_finished(uint8_t radio, uint8_t channel, int cb_type=CALLBACK_LOCAL, bool notify_plugin=true);
+void callback_tx_finished(uint8_t radio, uint8_t channel, int cb_type=CALLBACK_LOCAL, uint8_t callback_selector=TX_CALLBACK_NONE);
 
 /**
  * Callback when a LoRa packet is about to be transmitted

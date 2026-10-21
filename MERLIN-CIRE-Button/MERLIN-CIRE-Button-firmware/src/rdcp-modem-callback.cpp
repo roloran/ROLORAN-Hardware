@@ -6,7 +6,7 @@
 #include "rdcp-modem-constants.h"
 #include "rdcp-modem-plugin.h"
 
-void callback_tx_finished(uint8_t radio, uint8_t channel, int cb_type, bool notify_plugin)
+void callback_tx_finished(uint8_t radio, uint8_t channel, int cb_type, uint8_t callback_selector)
 {
   char info_msg[INFOLEN];
 
@@ -15,9 +15,9 @@ void callback_tx_finished(uint8_t radio, uint8_t channel, int cb_type, bool noti
   serial_writeln(info_msg);
 
   /* Usually, we want to avoid processing AIR radio callbacks twice, so we handle only LOCAL callbacks */
-  if ((cb_type == CALLBACK_LOCAL) && notify_plugin)
+  if ((cb_type == CALLBACK_LOCAL) && (callback_selector != TX_CALLBACK_NONE))
   {
-    plugin_callback(radio, channel, CALLBACK_TYPE_TXFIN, OPTION_DISABLED);
+    plugin_callback(radio, channel, CALLBACK_TYPE_TXFIN, OPTION_DISABLED, callback_selector);
   }
 
   return;

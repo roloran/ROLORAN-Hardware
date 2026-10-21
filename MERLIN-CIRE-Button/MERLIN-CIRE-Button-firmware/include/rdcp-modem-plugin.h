@@ -26,8 +26,9 @@ void plugin_incoming(uint8_t lora_payload_type=PAYLOAD_TYPE_GENERIC_LORA);
  * @param channel Channel id of channel relevant to callback
  * @param cb_type Callback type
  * @param cad_result CAD result on CAD callbacks
+ * @param tx_callback_selector Selector identifying a completed scheduled transmission
  */
-void plugin_callback(uint8_t radio, uint8_t channel, int cb_type, bool cad_result);
+void plugin_callback(uint8_t radio, uint8_t channel, int cb_type, bool cad_result, uint8_t tx_callback_selector=TX_CALLBACK_NONE);
 
 /**
  * Plugin function periodically called from the main loop.
