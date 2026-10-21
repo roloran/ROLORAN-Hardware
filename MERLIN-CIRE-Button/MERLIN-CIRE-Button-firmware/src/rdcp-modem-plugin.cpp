@@ -548,7 +548,7 @@ void rdcp_cire_resend(void)
     cire_button_display_threeliner("Meldung NICHT", "zugestellt, keine", "Verbindung");
     cire_button_cire_ongoing = false;
     led_off();
-    noTone(buzPin);
+    cmd_buzz(CMD_BUZ_FAILURE);
     return;
   }
 
