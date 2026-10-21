@@ -627,13 +627,13 @@ void rdcp_cire_ack(uint16_t origin, uint16_t confirmedseqnr, uint8_t acktype)
   if ((origin >= RDCPv04_ADDRESS_DA_LOWERBOUND) && (origin < RDCPv04_ADDRESS_MG_LOWERBOUND))
   {
     // Received ACK was from a DA, not by HQ
-    if (acktype == 0x00)
+    if (acktype == RDCPv04_ACKNOWLEDGMENT_POSITIVE)
     {
       serial_writeln("INFO: Positive ACK from DA received, waiting for HQ ACK");
       cire_state = CIRE_STATE_WAIT_HQ;
       cire_button_display_threeliner("Notfallmeldung", "in MERLIN-Basis", "verarbeitet.");
     }
-    else if (acktype == 0x01)
+    else if (acktype == RDCPv04_ACKNOWLEDGMENT_NEGATIVE)
     {
       serial_writeln("INFO: Negative ACK from DA received, aborting CIRE procedure");
       cire_state = CIRE_STATE_NONE;
@@ -643,12 +643,11 @@ void rdcp_cire_ack(uint16_t origin, uint16_t confirmedseqnr, uint8_t acktype)
       cire_button_display_threeliner("Kein Krisenbetrieb.", "Notfall kann nicht", "gemeldet werden.");
       cmd_buzz(CMD_BUZ_FAILURE);
     }
-    else if (acktype == 0x02)
+    else if (acktype == RDCPv04_ACKNOWLEDGMENT_POSNEG)
     {
       serial_writeln("INFO: Positive-negative ACK from DA received, waiting for HQ ACK");
       cire_state = CIRE_STATE_WAIT_HQ;
       cire_button_display_threeliner("Notfallmeldung wird", "von MERLIN-Basis", "verarbeitet. (keiner da)");
-      cmd_buzz(CMD_BUZ_FAILURE);
     }
     else
     {
@@ -665,21 +664,23 @@ void rdcp_cire_ack(uint16_t origin, uint16_t confirmedseqnr, uint8_t acktype)
     cire_state = CIRE_STATE_NONE;
     cire_button_cire_ongoing = false;
 
-    if (acktype == 0x00)
+    if (acktype == RDCPv04_ACKNOWLEDGMENT_POSITIVE)
     {
       serial_writeln("INFO: Positive ACK from HQ received");
       cire_button_display_threeliner("Notfallmeldung ist", "beim Krisenstab", "angekommen.");
       cmd_buzz(CMD_BUZ_SUCCESS);
     }
-    else if (acktype == 0x01)
+    else if (acktype == RDCPv04_ACKNOWLEDGMENT_NEGATIVE)
     {
       serial_writeln("INFO: Negative ACK from HQ received");
       cire_button_display_threeliner("Kein Krisenbetrieb.", "Notfall kann nicht", "gemeldet werden.");
+      cmd_buzz(CMD_BUZ_FAILURE);
     }
-    else if (acktype == 0x02)
+    else if (acktype == RDCPv04_ACKNOWLEDGMENT_POSNEG)
     {
       serial_writeln("INFO: Positive-negative ACK from HQ received");
       cire_button_display_threeliner("Notfallmeldung ist", "beim Krisenstab", "angekommen. (keiner da)");
+      cmd_buzz(CMD_BUZ_SUCCESS);
     }
     else
     {
