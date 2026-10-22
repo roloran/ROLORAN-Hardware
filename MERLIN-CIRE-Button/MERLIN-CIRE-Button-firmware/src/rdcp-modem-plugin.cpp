@@ -181,7 +181,7 @@ uint16_t cire_button_depressed_timeout = 0;
 // Idle time before turning off the display and entering deep sleep, in seconds.
 uint16_t cire_button_idle_timeout = 120;
 
-// Heartbeat scheduling. Actual heartbeat message transmission is not implemented yet.
+// Heartbeat scheduling state.
 const int64_t cire_button_heartbeat_initial_delay = 60 * SECONDS_TO_MILLISECONDS;
 const int64_t cire_button_heartbeat_interval = 12 * HOURS_TO_MILLISECONDS;
 int64_t cire_button_next_heartbeat_at = TIMESTAMP_ZERO;
@@ -204,6 +204,7 @@ int64_t cire_button_display_on_since     = TIMESTAMP_ZERO;
 bool cire_button_cire_ongoing            = OPTION_DISABLED;
 bool cire_button_cire_on_wakeup_pending  = OPTION_DISABLED;
 bool cire_button_heartbeat_on_wakeup_pending = OPTION_DISABLED;
+bool cire_button_heartbeat_ongoing       = OPTION_DISABLED;
 
 // Imported libraries and code snippets for OLED display based on
 // https://github.com/HelTecAutomation/Heltec_ESP32/blob/master/examples/OLED/SimpleDemo/SimpleDemo.ino
@@ -261,8 +262,50 @@ void cire_button_schedule_heartbeat_after(int64_t delay_ms)
 
 void cire_button_transmit_heartbeat(void)
 {
-  serial_writeln("INFO: Heartbeat is due; transmission is not implemented yet");
-  cire_button_schedule_heartbeat_after(cire_button_heartbeat_interval);
+  serial_writeln("INFO: Preparing to send Heartbeat");
+
+  struct rdcpv04_message rm;
+  uint8_t data[DATALEN];
+  uint16_t me = cfg.rdcp_address;
+  uint16_t entry_point = cfg.default_entry_point;
+
+  rm.header.sender = me;
+  rm.header.origin = me;
+  rm.header.sequence_number = RDCPv04_SEQUENCENR_SPECIAL_ZERO;
+  rm.header.destination = RDCPv04_HQ_MULTICAST_ADDRESS;
+  rm.header.message_type = RDCPv04_MSGTYPE_HEARTBEAT;
+  rm.header.rdcp_payload_length = RDCPv04_PAYLOAD_SIZE_MG_HEARTBEAT;
+  rm.header.counter = ZERO_LENGTH;
+  rm.header.relay1 = RDCPv04_HEADER_RELAY_MAGIC_NONE;
+  rm.header.relay2 = RDCPv04_HEADER_RELAY_MAGIC_NONE;
+  rm.header.relay3 = RDCPv04_HEADER_RELAY_MAGIC_NONE;
+
+  /* This device does not persist OAs, so 0xFFFF denotes an unknown OA reference. */
+  rm.payload.data[0] = 0xFF;
+  rm.payload.data[1] = 0xFF;
+  rm.payload.data[2] = entry_point % 256;
+  rm.payload.data[3] = entry_point / 256;
+
+  uint8_t data_for_crc[DATALEN];
+  memcpy(&data_for_crc, &rm.header, RDCPv04_HEADER_SIZE - RDCPv04_CRC_SIZE);
+  for (int i = COUNT_ZERO; i < rm.header.rdcp_payload_length; i++)
+  {
+    data_for_crc[i + RDCPv04_HEADER_SIZE - RDCPv04_CRC_SIZE] = rm.payload.data[i];
+  }
+  rm.header.checksum = crc16_rdcpv04(
+    data_for_crc,
+    RDCPv04_HEADER_SIZE - RDCPv04_CRC_SIZE + rm.header.rdcp_payload_length);
+
+  memcpy(&data, &rm.header, RDCPv04_HEADER_SIZE);
+  for (int i = COUNT_ZERO; i < rm.header.rdcp_payload_length; i++)
+  {
+    data[i + RDCPv04_HEADER_SIZE] = rm.payload.data[i];
+  }
+
+  cire_button_heartbeat_ongoing = OPTION_ENABLED;
+  scheduler_enqueue(CHANNEL1, PAYLOAD_TYPE_RDCP_V04,
+                    data, RDCPv04_HEADER_SIZE + rm.header.rdcp_payload_length,
+                    SCHEDULING_MODE_CHANNEL_FREE, TX_CALLBACK_HEARTBEAT, ZERO_TIMESTAMP);
 }
 
 /**
@@ -730,6 +773,14 @@ void plugin_callback(uint8_t radio, uint8_t channel, int cb_type, bool cad_resul
     led_blink();
     rdcp_cire_callback();
   }
+  else if ((cb_type == CALLBACK_TYPE_TXFIN) &&
+           (tx_callback_selector == TX_CALLBACK_HEARTBEAT) &&
+           cire_button_heartbeat_ongoing)
+  {
+    serial_writeln("INFO: Heartbeat transmission completed");
+    cire_button_heartbeat_ongoing = OPTION_DISABLED;
+    cire_button_schedule_heartbeat_after(cire_button_heartbeat_interval);
+  }
   else if (cb_type == CALLBACK_TYPE_TXSTART)
   {
 
@@ -864,7 +915,7 @@ void cire_button_sleep_if_idle(void)
 #if defined(ESP32)
   static bool sleep_unavailable_warning_printed = OPTION_DISABLED;
 
-  if (cire_button_cire_ongoing) return;
+  if (cire_button_cire_ongoing || cire_button_heartbeat_ongoing) return;
   if (my_millis() - cire_button_display_on_since <= cire_button_idle_timeout * SECONDS_TO_MILLISECONDS) return;
 
   if (cfg.additional_wakeup_pin == PIN_NOT_USED)
@@ -1141,6 +1192,7 @@ void plugin_loop(void)
 
   /* A CIRE always has priority over a due heartbeat. */
   if (!cire_button_cire_ongoing &&
+      !cire_button_heartbeat_ongoing &&
       (cire_button_next_heartbeat_at != TIMESTAMP_ZERO) &&
       (now >= cire_button_next_heartbeat_at))
   {
