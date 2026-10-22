@@ -182,8 +182,8 @@ uint16_t cire_button_depressed_timeout = 0;
 uint16_t cire_button_idle_timeout = 120;
 
 // Heartbeat scheduling state.
-const int64_t cire_button_heartbeat_initial_delay = 60 * SECONDS_TO_MILLISECONDS;
-const int64_t cire_button_heartbeat_interval = 12 * HOURS_TO_MILLISECONDS;
+int64_t cire_button_heartbeat_initial_delay = 60 * SECONDS_TO_MILLISECONDS;
+int64_t cire_button_heartbeat_interval = 12 * HOURS_TO_MILLISECONDS;
 int64_t cire_button_next_heartbeat_at = TIMESTAMP_ZERO;
 
 // Time to wait for the corresponding ACK, in seconds.
@@ -360,14 +360,27 @@ bool plugin_serial(const char* line)
     nsa_strsplice(line_uppercase);
     const char* timeout_name = nsa.part[2];
     const char* timeout_value = nsa.part[3];
-    long timeout_amount = strtol(timeout_value, NULL, BASE10);
+    int64_t timeout_amount = strtoll(timeout_value, NULL, BASE10);
     bool is_depressed_timeout = strcmp(timeout_name, "DEPRESSED") == 0;
+    bool is_heartbeat_timeout =
+      (strcmp(timeout_name, "HEARTBEAT_INITIAL_DELAY") == 0) ||
+      (strcmp(timeout_name, "HEARTBEAT_INTERVAL") == 0);
+    int64_t maximum_timeout = is_heartbeat_timeout ? UINT32_MAX : UINT16_MAX;
 
-    if ((timeout_amount < (is_depressed_timeout ? 0 : 1)) || (timeout_amount > UINT16_MAX))
+    if ((timeout_amount < (is_depressed_timeout ? 0 : 1)) || (timeout_amount > maximum_timeout))
     {
-      serial_writeln(is_depressed_timeout
-        ? "ERROR: DEPRESSED timeout must be an integer between 0 and 65535 milliseconds"
-        : "ERROR: Timeout must be an integer between 1 and 65535 seconds");
+      if (is_depressed_timeout)
+      {
+        serial_writeln("ERROR: DEPRESSED timeout must be an integer between 0 and 65535 milliseconds");
+      }
+      else if (is_heartbeat_timeout)
+      {
+        serial_writeln("ERROR: Heartbeat timeout must be an integer between 1 and 4294967295 seconds");
+      }
+      else
+      {
+        serial_writeln("ERROR: Timeout must be an integer between 1 and 65535 seconds");
+      }
       return true;
     }
 
@@ -381,21 +394,42 @@ bool plugin_serial(const char* line)
     }
     else if (strcmp(timeout_name, "SLEEP") == 0)
     {
+      if (timeout_amount * SECONDS_TO_MILLISECONDS <= cire_button_heartbeat_initial_delay)
+      {
+        serial_writeln("ERROR: SLEEP timeout must be greater than HEARTBEAT_INITIAL_DELAY");
+        return true;
+      }
       cire_button_idle_timeout = (uint16_t) timeout_amount;
     }
     else if (strcmp(timeout_name, "DEPRESSED") == 0)
     {
       cire_button_depressed_timeout = (uint16_t) timeout_amount;
     }
+    else if (strcmp(timeout_name, "HEARTBEAT_INITIAL_DELAY") == 0)
+    {
+      if (timeout_amount * SECONDS_TO_MILLISECONDS >=
+          (int64_t) cire_button_idle_timeout * SECONDS_TO_MILLISECONDS)
+      {
+        serial_writeln("ERROR: HEARTBEAT_INITIAL_DELAY must be less than SLEEP timeout");
+        return true;
+      }
+      cire_button_heartbeat_initial_delay = timeout_amount * SECONDS_TO_MILLISECONDS;
+    }
+    else if (strcmp(timeout_name, "HEARTBEAT_INTERVAL") == 0)
+    {
+      cire_button_heartbeat_interval = timeout_amount * SECONDS_TO_MILLISECONDS;
+    }
     else
     {
-      serial_writeln("ERROR: Unknown timeout; use DA, HQ, SLEEP, or DEPRESSED");
+      serial_writeln(
+        "ERROR: Unknown timeout; use DA, HQ, SLEEP, DEPRESSED, HEARTBEAT_INITIAL_DELAY, or HEARTBEAT_INTERVAL");
       return true;
     }
 
     char timeout_info[INFOLEN];
     const char* timeout_unit = strcmp(timeout_name, "DEPRESSED") == 0 ? "milliseconds" : "seconds";
-    snprintf(timeout_info, INFOLEN, "INFO: %s timeout set to %ld %s", timeout_name, timeout_amount, timeout_unit);
+    snprintf(timeout_info, INFOLEN, "INFO: %s timeout set to %lld %s",
+             timeout_name, (long long) timeout_amount, timeout_unit);
     serial_writeln(timeout_info);
     return true;
   }

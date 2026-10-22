@@ -54,6 +54,21 @@ Difficulty rating: Suitable for first-time contributors
 The supported commands for the BRB (Big-Red-Button) correspond mostly to those of the RDCP-Modem (on whose code this is built).
 This project does however, also provide a few additional commands.
 
+### Heartbeat timeout commands
+
+Heartbeat timing is configured in seconds:
+
+- `SET TIMEOUT HEARTBEAT_INITIAL_DELAY 60` sets the delay between startup and the first heartbeat. It must be shorter than the configured `SLEEP` timeout. The default is 60 seconds.
+
+- `SET TIMEOUT HEARTBEAT_INTERVAL 43200` sets the delay between subsequent heartbeats. The default is 43200 seconds (12 hours).
+
+Prefix a command with `+` to persist it in the initscript and restore it after a restart, for example:
+
+~~~
++SET TIMEOUT HEARTBEAT_INITIAL_DELAY 60
++SET TIMEOUT HEARTBEAT_INTERVAL 43200
+~~~
+
 ### Melody Subcommands
 Some HW configurations of the BRB may have the ability to play sounds through a passive buzzer.
 Passive buzzers can only produce beep tones, however, through chaining it is possible to play little melodies.
