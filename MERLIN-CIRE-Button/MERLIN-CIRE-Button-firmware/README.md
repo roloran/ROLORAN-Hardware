@@ -54,9 +54,11 @@ Difficulty rating: Suitable for first-time contributors
 The supported commands for the BRB (Big-Red-Button) correspond mostly to those of the RDCP-Modem (on whose code this is built).
 This project does however, also provide a few additional commands.
 
-### Heartbeat timeout commands
+### Sleep and heartbeat timeout commands
 
-Heartbeat timing is configured in seconds:
+Sleep and heartbeat timing is configured in seconds:
+
+- `SET TIMEOUT SLEEP 120` sets the idle time before the display is turned off and the button enters deep sleep. It must be greater than `HEARTBEAT_INITIAL_DELAY`. The default is 120 seconds.
 
 - `SET TIMEOUT HEARTBEAT_INITIAL_DELAY 60` sets the delay between startup and the first heartbeat. It must be shorter than the configured `SLEEP` timeout. The default is 60 seconds.
 
@@ -65,6 +67,7 @@ Heartbeat timing is configured in seconds:
 Prefix a command with `+` to persist it in the initscript and restore it after a restart, for example:
 
 ~~~
++SET TIMEOUT SLEEP 120
 +SET TIMEOUT HEARTBEAT_INITIAL_DELAY 60
 +SET TIMEOUT HEARTBEAT_INTERVAL 43200
 ~~~
