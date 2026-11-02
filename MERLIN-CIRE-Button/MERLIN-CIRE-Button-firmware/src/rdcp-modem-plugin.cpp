@@ -1155,6 +1155,10 @@ void plugin_loop(void)
 
     /* Make sure we initialize only once */
     cire_button_initialized = true;
+
+    /* Initialization may schedule work relative to a newer timestamp. Refresh
+       now so a timer-woken heartbeat is handled in this same loop iteration. */
+    now = my_millis();
   }
 
   if (button_press_by_wakeup)
